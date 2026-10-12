@@ -6,7 +6,7 @@ Build Windows artifacts on Windows and macOS artifacts on macOS. PyInstaller pac
 
 ## GitHub Actions builds
 
-The [Build desktop binaries workflow](../.github/workflows/build-desktop.yml) runs on pushes to `main`, pull requests targeting `main`, version tags matching `v*`, and manual dispatch. It uses Python 3.12 and builds three separate targets:
+The [Build desktop binaries workflow](../.github/workflows/build-desktop.yml) runs on pushes to `main`, pull requests targeting `main`, version tags matching `v*`, published releases (including prereleases), and manual dispatch. It uses Python 3.12 and builds three separate targets:
 
 | Artifact | Platform |
 | --- | --- |
@@ -25,7 +25,20 @@ To start a manual build after the workflow is on GitHub:
 
 Extract the downloaded artifact to find the application ZIP and startup screenshot, then extract the application ZIP. Keep the whole Windows application folder together; on Mac, copy the extracted `.app` to Applications if desired.
 
-Artifacts are retained for 30 days. The workflow uploads build artifacts without creating or publishing a GitHub Release. It does not use signing credentials: Windows builds are unsigned, and Mac builds are ad-hoc signed without Developer ID signing or notarization. Real-controller testing is separate from the automated startup check.
+Actions artifacts are retained for 30 days. Publishing a release also attaches the three application ZIPs to that release after all builds and startup checks succeed. These release downloads are separate from the temporary Actions artifacts.
+
+## Publish a release
+
+1. Update `APP_VERSION` in `masso_core.py` to the version you intend to release and commit the change.
+2. Open the repository's **Releases** page and choose **Draft a new release**.
+3. Choose or create a version tag, such as `v2.0.0`, pointing to a commit with the release workflow enabled.
+4. Enter a title and release notes. Select **Set as a pre-release** for a preview build.
+5. Click **Publish release**. The release appears immediately while the three builds run.
+6. Once **Build desktop binaries** succeeds, users can download the Windows x64, Apple Silicon Mac, and Intel Mac ZIPs from the release's **Assets** section.
+
+If a build fails, downloads are not attached. Fix the failure before publishing a new version, or use **Re-run failed jobs** if the failure was temporary. Re-running the release upload replaces matching ZIP assets. Drafting or editing a release does not trigger a build; publishing it does. Branch, tag-push, and manual builds continue uploading Actions artifacts without attaching them to releases.
+
+The workflow uses the repository's automatic token to attach assets, so no additional secret is needed. It does not use signing credentials: Windows builds are unsigned, and Mac builds are ad-hoc signed without Developer ID signing or notarization. Real-controller testing is separate from the automated startup check.
 
 ## macOS `.app`
 

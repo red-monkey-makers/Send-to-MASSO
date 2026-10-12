@@ -44,6 +44,8 @@ On Windows, substitute `.\.venv\Scripts\python.exe` for `.venv/bin/python`. Demo
 
 ## Build or use a standalone app
 
+Download the ZIP for your platform from the repository's [Releases page](https://github.com/red-monkey-makers/Send-to-MASSO/releases). Windows x64, Apple Silicon Mac, and Intel Mac downloads appear after the release's automated builds finish. Extract the ZIP before launching the app.
+
 The [GitHub Actions workflow](.github/workflows/build-desktop.yml) builds Windows x64, Mac Apple Silicon, and Mac Intel ZIPs. After it is pushed to GitHub, open **Actions → Build desktop binaries** to run a build and download its artifacts. See the [workflow instructions](docs/BUILDING.md#github-actions-builds).
 
 Packaged apps include Python and their runtime dependencies. Build on macOS for a Mac `.app`, or on Windows for an `.exe`.

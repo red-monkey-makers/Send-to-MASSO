@@ -30,6 +30,8 @@ Version 2 is an unreleased desktop preview. Earlier entries describe the retired
 
 ### Packaging and cleanup
 
+- Published GitHub releases now build and attach Windows x64, Mac Apple Silicon, and Mac Intel ZIP downloads after all build checks succeed.
+
 - Added GitHub Actions builds for Windows x64, Mac Apple Silicon, and Mac Intel, with automated tests, packaged startup checks, and downloadable ZIP artifacts.
 
 - Replaced the legacy FLR icon with the Send-2-MASSO cutter-and-arrow emblem, with multiple sizes for desktop use.

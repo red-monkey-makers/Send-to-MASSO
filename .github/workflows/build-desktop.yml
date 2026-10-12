@@ -2,6 +2,8 @@ name: Build desktop binaries
 
 on:
   workflow_dispatch:
+  release:
+    types: [published]
   push:
     branches: [main]
     tags: ['v*']
@@ -12,8 +14,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: desktop-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
 
 jobs:
   build:
@@ -111,3 +113,39 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
+
+  release:
+    name: Attach release downloads
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified builds
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Send-to-MASSO-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Attach binaries to published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        shell: bash
+        run: |
+          assets=(
+            release-assets/Send-to-MASSO-windows-x64.zip
+            release-assets/Send-to-MASSO-macos-arm64.zip
+            release-assets/Send-to-MASSO-macos-x64.zip
+          )
+          for asset in "${assets[@]}"; do
+            if [[ ! -s "$asset" ]]; then
+              echo "Missing release binary: $asset" >&2
+              exit 1
+            fi
+          done
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --repo "$GH_REPO" --clobber
