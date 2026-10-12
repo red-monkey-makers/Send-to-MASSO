@@ -10,9 +10,9 @@ The [Build desktop binaries workflow](../.github/workflows/build-desktop.yml) ru
 
 | Artifact | Platform |
 | --- | --- |
-| `Send-to-MASSO-Manager-windows-x64` | Windows x64 executable with its required `_internal` folder |
-| `Send-to-MASSO-Manager-macos-arm64` | Apple Silicon Mac app |
-| `Send-to-MASSO-Manager-macos-x64` | Intel Mac app |
+| `Send-to-MASSO-windows-x64` | Windows x64 executable with its required `_internal` folder |
+| `Send-to-MASSO-macos-arm64` | Apple Silicon Mac app |
+| `Send-to-MASSO-macos-x64` | Intel Mac app |
 
 Each job installs the build requirements, runs the automated tests, builds with `build_desktop.py`, and launches the packaged app in screenshot mode. Mac jobs also verify the ad-hoc code signature. A failed check prevents that job from uploading a build.
 
@@ -35,16 +35,20 @@ From the project folder:
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements-build.txt
 .venv/bin/python build_desktop.py
-open "dist/Send-to-MASSO Manager.app"
+open "dist/Send-to-MASSO.app"
 ```
 
-The output is `dist/Send-to-MASSO Manager.app`. Copy the `.app` to Applications, or send the complete application bundle. To create a ZIP that preserves its bundle structure and symbolic links:
+The output is `dist/Send-to-MASSO.app`. Copy the `.app` to Applications, or send the complete application bundle. To create a ZIP that preserves its bundle structure and symbolic links:
 
 ```sh
 ditto -c -k --sequesterRsrc --keepParent \
-  "dist/Send-to-MASSO Manager.app" \
-  "dist/Send-to-MASSO-Manager-macOS.zip"
+  "dist/Send-to-MASSO.app" \
+  "dist/Send-to-MASSO-macOS.zip"
 ```
+
+The Mac bundle and running application's Dock icon use `assets/send-2-masso-dock-icon.png`, the logo mark on a white rounded-square tile for contrast. PyInstaller converts this high-resolution PNG to the native `.icns` format when building. Rebuild and relaunch the app to pick up icon changes.
+
+Launch the `.app` bundle for the Dock label **Send-to-MASSO**. Running `send_to_masso.py` directly uses the Python interpreter process, which macOS may label `python3.12` in the Dock even though the app uses its own logo and window title.
 
 Build with an Apple Silicon Python environment for an arm64 application or an Intel Python environment for an x86_64 application. This script uses the build interpreter's architecture. Universal builds require a universal Python environment and universal binary dependencies; this script does not promise a universal artifact.
 
@@ -71,13 +75,13 @@ py -3.12 -m venv .venv
 The executable is:
 
 ```text
-dist\Send-to-MASSO Manager\Send-to-MASSO Manager.exe
+dist\Send-to-MASSO\Send-to-MASSO.exe
 ```
 
-Distribute the **entire** `dist\Send-to-MASSO Manager` folder, including `_internal`, rather than copying just its executable. Create a ZIP with:
+Distribute the **entire** `dist\Send-to-MASSO` folder, including `_internal`, rather than copying just its executable. Create a ZIP with:
 
 ```powershell
-Compress-Archive -Path "dist\Send-to-MASSO Manager" -DestinationPath "dist\Send-to-MASSO-Manager-Windows.zip" -Force
+Compress-Archive -Path "dist\Send-to-MASSO" -DestinationPath "dist\Send-to-MASSO-Windows.zip" -Force
 ```
 
 For a single standalone `.exe`, use:
@@ -86,7 +90,7 @@ For a single standalone `.exe`, use:
 .\.venv\Scripts\python.exe build_desktop.py --onefile
 ```
 
-This writes `dist\Send-to-MASSO Manager.exe`. One-file builds extract their dependencies at launch; use the folder build first when troubleshooting startup issues.
+This writes `dist\Send-to-MASSO.exe`. One-file builds extract their dependencies at launch; use the folder build first when troubleshooting startup issues.
 
 Windows bundles save `send_to_masso.json` beside the executable. Extract the application to a writable folder, as with the existing Windows release.
 
@@ -106,7 +110,7 @@ For a headless macOS smoke test:
 
 ```sh
 QT_QPA_PLATFORM=offscreen \
-  "dist/Send-to-MASSO Manager.app/Contents/MacOS/Send-to-MASSO Manager" \
+  "dist/Send-to-MASSO.app/Contents/MacOS/Send-to-MASSO" \
   --screenshot /tmp/masso-packaged.png
 ```
 

@@ -214,7 +214,7 @@ Desktop tests use Qt's offscreen platform and fake upload calls. They never conn
 For a screenshot without opening a desktop window:
 
 ```sh
-QT_QPA_PLATFORM=offscreen .venv/bin/python send_to_masso_v2.py --screenshot /tmp/masso-v2.png
+QT_QPA_PLATFORM=offscreen .venv/bin/python send_to_masso.py --screenshot /tmp/masso-v2.png
 ```
 
 Manual checks before releasing v2:

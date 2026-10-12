@@ -73,11 +73,11 @@ jobs:
 
           dist = Path("dist")
           if sys.platform == "win32":
-              executable = dist / "Send-to-MASSO Manager" / "Send-to-MASSO Manager.exe"
+              executable = dist / "Send-to-MASSO" / "Send-to-MASSO.exe"
           else:
-              bundle = dist / "Send-to-MASSO Manager.app"
+              bundle = dist / "Send-to-MASSO.app"
               subprocess.run(["codesign", "--verify", "--deep", "--strict", str(bundle)], check=True)
-              executable = bundle / "Contents" / "MacOS" / "Send-to-MASSO Manager"
+              executable = bundle / "Contents" / "MacOS" / "Send-to-MASSO"
           screenshot = dist / ("startup-" + os.environ["BUILD_TARGET"] + ".png")
           subprocess.run([str(executable.resolve()), "--screenshot", str(screenshot.resolve())],
                          check=True, timeout=60)
@@ -93,20 +93,20 @@ jobs:
           import subprocess
           import sys
 
-          archive = Path("dist") / ("Send-to-MASSO-Manager-" + os.environ["BUILD_TARGET"])
+          archive = Path("dist") / ("Send-to-MASSO-" + os.environ["BUILD_TARGET"])
           if sys.platform == "win32":
-              shutil.make_archive(str(archive), "zip", root_dir="dist", base_dir="Send-to-MASSO Manager")
+              shutil.make_archive(str(archive), "zip", root_dir="dist", base_dir="Send-to-MASSO")
           else:
               # Preserve executable permissions, symbolic links, and the complete .app.
               subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent",
-                              "dist/Send-to-MASSO Manager.app", str(archive) + ".zip"], check=True)
+                              "dist/Send-to-MASSO.app", str(archive) + ".zip"], check=True)
 
       - name: Upload application ZIP and startup preview
         uses: actions/upload-artifact@v7
         with:
-          name: Send-to-MASSO-Manager-${{ matrix.target }}
+          name: Send-to-MASSO-${{ matrix.target }}
           path: |
-            dist/Send-to-MASSO-Manager-${{ matrix.target }}.zip
+            dist/Send-to-MASSO-${{ matrix.target }}.zip
             dist/startup-${{ matrix.target }}.png
           if-no-files-found: error
           compression-level: 0

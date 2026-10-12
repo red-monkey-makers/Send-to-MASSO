@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent
-NAME = "Send-to-MASSO Manager"
+NAME = "Send-to-MASSO"
 
 
 def main():
@@ -25,15 +25,17 @@ def main():
                "--onefile" if args.onefile else "--onedir", "--name", NAME,
                "--distpath", str(ROOT / "dist"), "--workpath", str(ROOT / "build" / "pyinstaller"),
                "--specpath", str(ROOT / "build"), "--noupx", "--exclude-module", "tkinter",
-               "--icon", str(ROOT / "S2M.ico"), "--hidden-import", "qrcode.image.pil"]
+               "--icon", str(ROOT / "assets" / "send-2-masso-dock-icon.png" if sys.platform == "darwin"
+                             else ROOT / "S2M.ico"), "--hidden-import", "qrcode.image.pil"]
     for filename in ("S2M.ico", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         command.extend(["--add-data", f"{ROOT / filename}:."])
     command.extend(["--add-data", f"{ROOT / 'assets' / 'send-2-masso-logo.png'}:assets"])
+    command.extend(["--add-data", f"{ROOT / 'assets' / 'send-2-masso-dock-icon.png'}:assets"])
     for package in ("PySide6-Essentials", "shiboken6", "qrcode", "Pillow"):
         command.extend(["--copy-metadata", package])
     if sys.platform == "darwin":
         command.extend(["--osx-bundle-identifier", "com.redmonkeymakers.sendtomasso"])
-    command.append(str(ROOT / "send_to_masso_v2.py"))
+    command.append(str(ROOT / "send_to_masso.py"))
     print(subprocess.list2cmdline(command) if sys.platform == "win32" else shlex.join(command), flush=True)
     if args.dry_run:
         return 0

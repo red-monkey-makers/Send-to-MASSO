@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Send-to-MASSO Manager v2: Qt desktop interface over the shared UDP client."""
+"""Send-to-MASSO v2: Qt desktop interface over the shared UDP client."""
 from __future__ import annotations
 
 import argparse
@@ -10,19 +10,19 @@ import sys
 import time
 
 try:
-    from PySide6.QtCore import Qt, QTimer, Signal, QItemSelectionModel
+    from PySide6.QtCore import Qt, QTimer, Signal, QItemSelectionModel, QVariantAnimation, QEasingCurve
     from PySide6.QtGui import QAction, QColor, QFont, QIcon, QKeySequence, QPixmap
     from PySide6.QtWidgets import (
         QApplication, QAbstractItemView, QCheckBox, QComboBox, QFileDialog,
         QFormLayout, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-        QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton,
+        QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QListWidget, QListWidgetItem,
         QScrollArea, QStackedWidget, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
     )
 except ImportError:
     raise SystemExit("Install the desktop dependencies first:\n  python -m pip install -r requirements.txt")
 
 from masso_core import (
-    APP_DIR, RESOURCE_DIR, MassoClient, MassoStatus, build_masso_qr_payload, default_qr_filename,
+    APP_DIR, APP_NAME, APP_VERSION, RESOURCE_DIR, MassoClient, MassoStatus, build_masso_qr_payload, default_qr_filename,
     format_elapsed_seconds, load_config, normalize_masso_folder, save_config,
     validate_masso_name_parts,
 )
@@ -31,6 +31,8 @@ from masso_workflow import QueueItem, UploadQueue
 STYLE = """
 QWidget { color: #202b38; font-size: 13px; }
 QMainWindow, QWidget#workspace { background: #f2f4f5; }
+QMessageBox { background: #ffffff; }
+QMessageBox QLabel { color: #202b38; background: transparent; }
 QWidget#sidebar { background: #17212b; }
 QWidget#sidebar QLabel { color: #b0bdc8; }
 QFrame#brandCard { background: #f2f6f6; border-radius: 10px; }
@@ -59,6 +61,10 @@ QComboBox QAbstractItemView { background: white; color: #202b38; selection-backg
 QTableWidget { background: #ffffff; border: none; gridline-color: #eef1f3; selection-background-color: #e5f2ec; selection-color: #17212b; }
 QHeaderView::section { background: #f7f9fa; color: #75828e; border: none; border-bottom: 1px solid #e6ebee; padding: 12px 10px; font-size: 11px; font-weight: 600; }
 QTableWidget::item { padding-left: 10px; border-bottom: 1px solid #eef1f3; }
+QListWidget { background: #ffffff; border: 1px solid #dfe5e8; border-radius: 7px; outline: none; }
+QListWidget::item { padding: 12px 14px; border-bottom: 1px solid #eef1f3; }
+QListWidget::item:selected { background: #e5f2ec; color: #17212b; }
+QListWidget::item:hover { background: #f0f6f3; }
 QProgressBar { background: #e9eef0; border: none; border-radius: 3px; min-height: 6px; max-height: 6px; }
 QProgressBar::chunk { background: #28a17d; border-radius: 3px; }
 QCheckBox { color: #687583; spacing: 8px; }
@@ -94,6 +100,11 @@ def card():
     layout.setContentsMargins(22, 20, 22, 20)
     layout.setSpacing(12)
     return widget, layout
+
+
+def app_icon():
+    path = RESOURCE_DIR / "assets" / "send-2-masso-dock-icon.png" if sys.platform == "darwin" else RESOURCE_DIR / "S2M.ico"
+    return QIcon(str(path))
 
 
 class FileTable(QTableWidget):
@@ -147,16 +158,56 @@ class DemoClient:
         pass
 
 
+class ToolPaneHost(QWidget):
+    """Keep the queue full width while its tool pane slides over the right edge."""
+    def __init__(self, content, pane):
+        super().__init__()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(content)
+        self.pane = pane
+        pane.setParent(self)
+        pane.hide()
+        self.reveal = 0.0
+        self.opened = False
+        self.animation = QVariantAnimation(self)
+        self.animation.setDuration(220)
+        self.animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self.animation.valueChanged.connect(self.position_pane)
+        self.animation.finished.connect(self.finish_animation)
+
+    def set_open(self, opened):
+        self.animation.stop()
+        self.opened = opened
+        if opened:
+            self.pane.show()
+            self.pane.raise_()
+        self.animation.setStartValue(self.reveal)
+        self.animation.setEndValue(1.0 if opened else 0.0)
+        self.animation.start()
+
+    def position_pane(self, reveal):
+        self.reveal = float(reveal)
+        width = min(440, self.width())
+        self.pane.setGeometry(round(self.width() - width * self.reveal), 0, width, self.height())
+
+    def finish_animation(self):
+        if not self.opened:
+            self.pane.hide()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.position_pane(self.reveal)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, demo=False):
         super().__init__()
         self.demo = demo
-        self.setWindowTitle("Send-to-MASSO Manager · v2 Preview" if demo else "Send-to-MASSO Manager · v2")
+        self.setWindowTitle("Send-to-MASSO · Preview" if demo else "Send-to-MASSO")
         self.resize(1240, 960)
         self.setMinimumSize(1060, 740)
-        icon = RESOURCE_DIR / "S2M.ico"
-        if icon.exists():
-            self.setWindowIcon(QIcon(str(icon)))
+        self.setWindowIcon(app_icon())
         self.events = queue.Queue()
         self.client = DemoClient() if demo else MassoClient(self.events)
         self.workflow = UploadQueue(self.client)
@@ -168,6 +219,8 @@ class MainWindow(QMainWindow):
         self.tools_data = {}
         self.tools_busy = False
         self.controller_serial = None
+        self.editing_profile_name = None
+        self.profile_baseline = ("", "")
         self.build_ui()
         self.load_profiles()
         if demo:
@@ -221,14 +274,13 @@ class MainWindow(QMainWindow):
         nav.addSpacing(30)
         self.pages = QStackedWidget()
         self.nav_buttons = []
-        for index, text in enumerate(["File queue", "Tools & export", "Profiles"]):
+        for index, text in enumerate(["File queue", "Profiles"]):
             b = button(text.replace("&", "&&"), lambda checked=False, i=index: self.set_page(i))
             b.setCheckable(True)
             nav.addWidget(b)
             self.nav_buttons.append(b)
         self.nav_buttons[0].setChecked(True)
         nav.addStretch()
-        nav.addWidget(label("LOCAL NETWORK\nDesktop edition · v2", "muted"))
         row.addWidget(side)
         work = QWidget()
         work.setObjectName("workspace")
@@ -243,6 +295,7 @@ class MainWindow(QMainWindow):
         top.addWidget(self.connection_badge)
         layout.addLayout(top)
         connection, conn = card()
+        self.connection_card = connection
         conn.setContentsMargins(16, 12, 16, 12)
         line = QHBoxLayout()
         line.addWidget(label("CONTROLLER", "eyebrow"))
@@ -250,23 +303,24 @@ class MainWindow(QMainWindow):
         self.profile_combo.setMinimumWidth(165)
         self.profile_combo.currentIndexChanged.connect(self.profile_selected)
         line.addWidget(self.profile_combo, 1)
-        self.host = QLineEdit()
-        self.host.setPlaceholderText("IP address or hostname")
-        self.host.setMinimumWidth(150)
-        line.addWidget(self.host, 1)
         self.connect_btn = button("Connect", self.toggle_connection)
         line.addWidget(self.connect_btn)
+        self.tools_toggle = button("Tool library", self.toggle_tools_pane)
+        self.tools_toggle.setCheckable(True)
+        line.addWidget(self.tools_toggle)
         conn.addLayout(line)
         layout.addWidget(connection)
         self.build_queue_page()
-        self.build_tools_page()
         self.build_profiles_page()
         page_scroll = QScrollArea()
         page_scroll.setWidgetResizable(True)
         page_scroll.setFrameShape(QFrame.Shape.NoFrame)
         page_scroll.setWidget(self.pages)
         page_scroll.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
-        layout.addWidget(page_scroll, 1)
+        self.page_scroll = page_scroll
+        self.tools_pane = self.build_tools_card()
+        self.tools_host = ToolPaneHost(page_scroll, self.tools_pane)
+        layout.addWidget(self.tools_host, 1)
         log_line = QHBoxLayout()
         self.log_toggle = button("Activity log ▸", self.toggle_log)
         self.log_toggle.setCheckable(True)
@@ -281,6 +335,7 @@ class MainWindow(QMainWindow):
         self.log_view.hide()
         layout.addWidget(self.log_view)
         row.addWidget(work, 1)
+        self.log(f"{APP_NAME} · v{APP_VERSION}")
         self.log("Desktop ready. Connect to a controller to receive live status.")
 
     def build_queue_page(self):
@@ -289,6 +344,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
         status, body = card()
+        self.status_card = status
         top = QHBoxLayout()
         left = QVBoxLayout()
         left.addWidget(label("MACHINE STATUS", "eyebrow"))
@@ -310,8 +366,9 @@ class MainWindow(QMainWindow):
         self.machine_progress = QProgressBar()
         self.machine_progress.setTextVisible(False)
         body.addWidget(self.machine_progress)
-        layout.addWidget(status)
+        layout.addWidget(status, 0, Qt.AlignmentFlag.AlignTop)
         queue_card, body = card()
+        self.queue_card = queue_card
         heading = QHBoxLayout()
         heading.addWidget(label("Upload queue", "section"))
         self.queue_count = label("0 files", "muted")
@@ -364,9 +421,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(queue_card, 1)
         self.pages.addWidget(page)
 
-    def build_tools_page(self):
+    def build_tools_card(self):
         page, layout = card()
-        layout.addWidget(label("Controller tool library", "section"))
+        heading = QHBoxLayout()
+        heading.addWidget(label("Controller tool library", "section"))
+        heading.addStretch()
+        self.tools_close = button("Close", lambda: self.toggle_tools_pane(False))
+        heading.addWidget(self.tools_close)
+        layout.addLayout(heading)
+        close_action = QAction("Close tool library", page)
+        close_action.setShortcut(QKeySequence("Escape"))
+        close_action.setShortcutContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        close_action.triggered.connect(lambda: self.toggle_tools_pane(False))
+        page.addAction(close_action)
         description = label("Read tool numbers and names from the controller, then export a text file.", "muted")
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -378,6 +445,7 @@ class MainWindow(QMainWindow):
         actions.addStretch()
         layout.addLayout(actions)
         self.tools_status = label("No tool data downloaded yet.", "muted")
+        self.tools_status.setWordWrap(True)
         layout.addWidget(self.tools_status)
         self.tools_table = QTableWidget(0, 2)
         self.tools_table.setHorizontalHeaderLabels(["TOOL NUMBER", "TOOL NAME"])
@@ -385,13 +453,26 @@ class MainWindow(QMainWindow):
         self.tools_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.tools_table.setColumnWidth(0, 150)
         self.tools_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tools_table.setMinimumHeight(180)
         layout.addWidget(self.tools_table, 1)
-        self.pages.addWidget(page)
+        return page
+
+    def toggle_tools_pane(self, opened):
+        if opened and self.tools_toggle.isHidden():
+            return
+        self.tools_toggle.setChecked(opened)
+        self.tools_host.set_open(opened)
+        if opened:
+            self.tools_close.setFocus()
+        else:
+            self.tools_toggle.setFocus()
 
     def build_profiles_page(self):
         page, layout = card()
         layout.addWidget(label("Connection profiles", "section"))
-        layout.addWidget(label("Save a controller address for each machine or workshop.", "muted"))
+        description = label("Create a profile with your controller address before connecting. Save one for each machine or workshop.", "muted")
+        description.setWordWrap(True)
+        layout.addWidget(description)
         form = QFormLayout()
         form.setVerticalSpacing(18)
         self.profile_name = QLineEdit()
@@ -407,15 +488,26 @@ class MainWindow(QMainWindow):
                                 button("Delete profile", self.delete_profile)]
         for b in self.profile_buttons:
             actions.addWidget(b)
+        self.profile_name.textChanged.connect(self.refresh_profile_actions)
+        self.profile_ip.textChanged.connect(self.refresh_profile_actions)
         actions.addStretch()
         layout.addLayout(actions)
-        layout.addStretch()
+        layout.addWidget(label("Saved profiles", "section"))
+        self.saved_profiles = QListWidget()
+        self.saved_profiles.setAccessibleName("Saved profiles")
+        self.saved_profiles.setMinimumHeight(180)
+        self.saved_profiles.currentRowChanged.connect(self.edit_profile_selected)
+        layout.addWidget(self.saved_profiles, 1)
         layout.addWidget(label("Saved profiles are available each time you open the app.", "muted"))
         self.pages.addWidget(page)
 
     def set_page(self, index):
+        self.connection_card.setVisible(index == 0)
+        if self.tools_host.opened:
+            self.toggle_tools_pane(False)
         self.pages.setCurrentIndex(index)
-        self.page_title.setText(["File queue", "Tools & export", "Profiles"][index])
+        self.page_scroll.verticalScrollBar().setValue(0)
+        self.page_title.setText(["File queue", "Profiles"][index])
         for i, b in enumerate(self.nav_buttons):
             b.setChecked(index == i)
 
@@ -427,21 +519,51 @@ class MainWindow(QMainWindow):
         if self.client.connected:
             return
         self.profile_combo.blockSignals(True)
+        self.saved_profiles.blockSignals(True)
         self.profile_combo.clear()
+        self.saved_profiles.clear()
+        self.profile_combo.setPlaceholderText("No saved profiles")
         for profile in self.config.get("profiles", []):
             self.profile_combo.addItem(profile["name"], profile["ip"])
+            item = QListWidgetItem(f"{profile['name']}\n{profile['ip']}")
+            item.setData(Qt.ItemDataRole.UserRole, profile["name"])
+            self.saved_profiles.addItem(item)
         index = self.profile_combo.findText(self.config.get("last_profile", ""))
-        if index >= 0:
-            self.profile_combo.setCurrentIndex(index)
+        if index < 0 and self.profile_combo.count():
+            index = 0
+        self.profile_combo.setCurrentIndex(index)
         self.profile_combo.blockSignals(False)
+        self.saved_profiles.blockSignals(False)
         self.profile_selected()
+        if not self.profile_combo.count():
+            self.set_page(1)
 
     def profile_selected(self, *_):
         if self.client.connected:
             return
-        self.host.setText(self.profile_combo.currentData() or "")
+        address = self.profile_combo.currentData() or ""
+        self.editing_profile_name = self.profile_combo.currentText() or None
+        self.profile_baseline = (self.profile_combo.currentText(), address)
+        self.saved_profiles.blockSignals(True)
+        self.saved_profiles.setCurrentRow(self.profile_combo.currentIndex())
+        self.saved_profiles.blockSignals(False)
         self.profile_name.setText(self.profile_combo.currentText())
-        self.profile_ip.setText(self.host.text())
+        self.profile_ip.setText(address)
+        self.refresh_status()
+
+    def edit_profile_selected(self, index):
+        if self.client.connected or index < 0:
+            return
+        self.profile_combo.setCurrentIndex(index)
+        self.profile_selected()
+
+    def refresh_profile_actions(self, *_):
+        editable = not self.client.connected
+        values = (self.profile_name.text().strip(), self.profile_ip.text().strip())
+        self.profile_buttons[0].setEnabled(editable and all(values) and values != self.profile_baseline)
+        self.profile_buttons[1].setEnabled(editable)
+        self.profile_buttons[2].setEnabled(editable and self.editing_profile_name is not None)
+        self.saved_profiles.setEnabled(editable)
 
     def save_profile(self):
         if self.client.connected:
@@ -450,8 +572,13 @@ class MainWindow(QMainWindow):
         if not name or not ip:
             return self.warn("Enter both a profile name and a controller address.")
         profiles = self.config.setdefault("profiles", [])
-        existing = next((p for p in profiles if p["name"] == name), None)
+        if (name, ip) == self.profile_baseline:
+            return
+        if any(p["name"] == name and p["name"] != self.editing_profile_name for p in profiles):
+            return self.warn("A profile with that name already exists. Choose a different name.")
+        existing = next((p for p in profiles if p["name"] == self.editing_profile_name), None)
         if existing:
+            existing["name"] = name
             existing["ip"] = ip
         else:
             profiles.append({"name": name, "ip": ip})
@@ -463,14 +590,20 @@ class MainWindow(QMainWindow):
     def new_profile(self):
         if self.client.connected:
             return self.warn("Disconnect before changing connection profiles.")
+        self.editing_profile_name = None
+        self.profile_baseline = ("", "")
+        self.saved_profiles.blockSignals(True)
+        self.saved_profiles.setCurrentRow(-1)
+        self.saved_profiles.blockSignals(False)
         self.profile_name.clear()
         self.profile_ip.clear()
+        self.refresh_profile_actions()
         self.profile_name.setFocus()
 
     def delete_profile(self):
         if self.client.connected:
             return self.warn("Disconnect before changing connection profiles.")
-        name = self.profile_name.text().strip()
+        name = self.editing_profile_name
         if not any(p["name"] == name for p in self.config.get("profiles", [])):
             return self.warn("Select a saved profile first.")
         if QMessageBox.question(self, "Delete profile", f"Delete {name}?") != QMessageBox.StandardButton.Yes:
@@ -491,9 +624,11 @@ class MainWindow(QMainWindow):
             self.controller_serial = None
             self.refresh_tools()
         else:
-            host = self.host.text().strip()
-            if not host:
-                return self.warn("Enter a controller address first.")
+            profile = self.selected_profile()
+            if not profile:
+                self.set_page(1)
+                return self.warn("Create and select a saved connection profile first.")
+            host = profile["ip"].strip()
             self.config["last_profile"] = self.profile_combo.currentText()
             self.persist()
             self.tools_data.clear()
@@ -501,6 +636,12 @@ class MainWindow(QMainWindow):
             self.refresh_tools()
             self.client.start(host)
         self.refresh_status()
+
+    def selected_profile(self):
+        return next((profile for profile in self.config.get("profiles", [])
+                     if profile["name"] == self.profile_combo.currentText()
+                     and profile["ip"] == self.profile_combo.currentData()
+                     and profile["ip"].strip()), None)
 
     def choose_files(self):
         if self.workflow.running or self.workflow.busy:
@@ -618,6 +759,12 @@ class MainWindow(QMainWindow):
         st = self.client.status
         allowed, reason = self.workflow.allowed()
         fresh = bool(st.last_packet_time and time.monotonic() - st.last_packet_time <= 5)
+        connected = not self.demo and self.client.connected and st.connected and fresh
+        self.status_card.setVisible(connected)
+        self.queue_card.setVisible(connected)
+        self.tools_toggle.setVisible(connected)
+        if not connected and self.tools_host.opened:
+            self.toggle_tools_pane(False)
         self.connection_badge.setText("Preview" if self.demo else ("Connected" if st.connected and fresh else "Connecting…" if st.connected else "Offline"))
         state_text = st.state_text() if st.connected and fresh else "Waiting for controller" if st.connected else "Not connected"
         self.state.setText(state_text)
@@ -631,13 +778,12 @@ class MainWindow(QMainWindow):
         self.machine_progress.setValue(st.progress if fresh else 0)
         busy = self.workflow.busy or self.workflow.running
         self.connect_btn.setText("Disconnect" if self.client.connected else "Connect")
-        self.connect_btn.setEnabled(not self.demo and not busy and not self.tools_busy)
+        self.connect_btn.setEnabled(not self.demo and not busy and not self.tools_busy
+                                    and (self.client.connected or bool(self.selected_profile())))
         self.profile_combo.setEnabled(not self.client.connected and not busy)
-        self.host.setEnabled(not self.client.connected and not busy)
         self.profile_name.setEnabled(not self.client.connected)
         self.profile_ip.setEnabled(not self.client.connected)
-        for b in self.profile_buttons:
-            b.setEnabled(not self.client.connected)
+        self.refresh_profile_actions()
         self.add_btn.setEnabled(not busy)
         valid = bool(self.workflow.pending())
         try:
@@ -775,7 +921,11 @@ def main():
     parser.add_argument("--demo", action="store_true", help="Preview with sample queue, no network connections or settings writes")
     parser.add_argument("--screenshot", type=Path, help="Save a demo screenshot and exit")
     args = parser.parse_args()
+    QApplication.setApplicationName(APP_NAME)
+    QApplication.setApplicationDisplayName(APP_NAME)
+    QApplication.setApplicationVersion(APP_VERSION)
     app = QApplication(sys.argv[:1])
+    app.setWindowIcon(app_icon())
     app.setStyle("Fusion")
     app.setFont(QFont("Helvetica Neue" if sys.platform == "darwin" else "Segoe UI", 10))
     app.setStyleSheet(STYLE)

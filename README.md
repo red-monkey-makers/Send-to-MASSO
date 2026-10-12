@@ -1,6 +1,6 @@
-# Send-to-MASSO Manager
+# Send-to-MASSO
 
-Send-to-MASSO Manager is an independent desktop utility for sending G-code files to a MASSO controller over the network. Version 2 uses a Qt interface with an upload queue, live machine status, connection profiles, QR-code export, and read-only tool-data export.
+Send-to-MASSO is an independent desktop utility for sending G-code files to a MASSO controller over the network. Version 2 uses a Qt interface with an upload queue, live machine status, connection profiles, QR-code export, and read-only tool-data export.
 
 This project is not affiliated with or endorsed by MASSO. Its network protocol is based on packet captures and real-controller testing, rather than official MASSO documentation.
 
@@ -10,9 +10,9 @@ This project is not affiliated with or endorsed by MASSO. Its network protocol i
 
 The legacy v1.8.20 RC launcher has been retired. Its previous version remains in Git history, and its protocol fixes are retained in `masso_core.py`.
 
-![Send-to-MASSO Manager v2 interface in demo mode](docs/ui-v2-preview.png)
+![Send-to-MASSO interface in connected demo mode](docs/ui-preview.png)
 
-The screenshot shows sample files in **demo mode**. Normal startup begins with an empty queue.
+The screenshot shows a simulated connected controller and sample files in **demo mode**. No controller connection or uploads occur during the preview. In normal use, the upload queue appears after connecting to a controller and receiving live status.
 
 ## Run from source
 
@@ -23,7 +23,7 @@ From the project folder on macOS or Linux:
 ```sh
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python send_to_masso_v2.py
+.venv/bin/python send_to_masso.py
 ```
 
 On Windows, use PowerShell:
@@ -31,13 +31,13 @@ On Windows, use PowerShell:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe send_to_masso_v2.py
+.\.venv\Scripts\python.exe send_to_masso.py
 ```
 
 To preview the interface with sample queue entries:
 
 ```sh
-.venv/bin/python send_to_masso_v2.py --demo
+.venv/bin/python send_to_masso.py --demo
 ```
 
 On Windows, substitute `.\.venv\Scripts\python.exe` for `.venv/bin/python`. Demo mode disables controller connections and uploads, and does not save settings.
@@ -53,7 +53,7 @@ On macOS, after creating the virtual environment:
 ```sh
 .venv/bin/python -m pip install -r requirements-build.txt
 .venv/bin/python build_desktop.py
-open "dist/Send-to-MASSO Manager.app"
+open "dist/Send-to-MASSO.app"
 ```
 
 You can copy the complete `.app` to Applications.
@@ -65,7 +65,7 @@ On Windows:
 .\.venv\Scripts\python.exe build_desktop.py
 ```
 
-Launch `dist\Send-to-MASSO Manager\Send-to-MASSO Manager.exe`. Keep the entire output folder, including `_internal`, together. If you receive it as a ZIP, extract it to a writable folder before launching.
+Launch `dist\Send-to-MASSO\Send-to-MASSO.exe`. Keep the entire output folder, including `_internal`, together. If you receive it as a ZIP, extract it to a writable folder before launching.
 
 For a single Windows executable, build with `build_desktop.py --onefile`.
 
@@ -79,9 +79,13 @@ See [Building desktop bundles](docs/BUILDING.md) for packaging, architecture, Ma
 4. Select the profile in the connection bar and click **Connect**.
 5. Open **File queue** and wait for fresh machine status.
 
-An IP address is the recommended starting point; resolvable hostnames are also supported. Disconnect before switching, editing, or deleting profiles.
+A saved profile is required to connect. On first launch, the app opens **Profiles** so you can create one. An IP address is the recommended starting point; resolvable hostnames are also supported. Disconnect before switching, editing, or deleting profiles.
+
+Use **New profile** to add another controller, or select an existing entry in the **Saved profiles** list below the form to edit it. **Save profile** is enabled only when both fields are filled in and the values have changed. Each profile needs a unique name; renaming an existing profile updates that entry.
 
 ## Send files
+
+The **Upload queue** appears once live controller status confirms the connection. It hides if the connection is lost; queued files remain available when you reconnect.
 
 1. Set the **Target folder**, for example `\Jobs\`, `\Test\`, or `\` for the MASSO root. Forward slashes are accepted and normalized to backslashes.
 2. Click **+ Add files**, or drag local files into the queue.
@@ -132,7 +136,7 @@ The app creates one PNG per file, named `YourFileName_MASSO_QR.png`. QR codes re
 
 ## Export tool data
 
-Connect to the controller, open **Tools & export**, and click **Download tools**. Once the download finishes, click **Export text…** to save the list.
+Connect to the controller and open **File queue**. The **Tool library** button appears next to **Connect** once live controller status confirms the connection. Click it to slide open the right-side pane, then click **Download tools**. Once the download finishes, click **Export text…** to save the list. Click **Close** or press **Escape** in the pane to return to the queue.
 
 This feature reads slots 1–118 and exports populated tool numbers and names. It does not modify controller tool data or decode offsets, diameters, or wear values.
 

@@ -18,7 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, Callable
 
-APP_NAME = "Send-to-MASSO Manager"
+APP_NAME = "Send-to-MASSO"
+APP_VERSION = "2 Preview"
 # Keep the shop utility self-contained: profiles/config live beside the program.
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent
@@ -1069,10 +1070,8 @@ def load_config() -> Dict[str, Any]:
         except Exception:
             pass
     return {
-        "profiles": [
-            {"name": "MASSO", "ip": "192.168.137.245"},
-        ],
-        "last_profile": "MASSO",
+        "profiles": [],
+        "last_profile": "",
         "last_folder": "\\",
         "last_local_dir": str(Path.home()),
         "auto_clear_queue": False,
