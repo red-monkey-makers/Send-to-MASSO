@@ -104,7 +104,7 @@ Run the automated tests in the same environment before building:
 
 Use `.\.venv\Scripts\python.exe` instead on Windows.
 
-After building, launch the artifact with `--demo` to inspect the UI without opening controller connections or writing settings. Check QR export and tool export as well as startup; controller uploads need separate real-hardware testing.
+After building, launch the artifact with `--demo` to inspect the UI without opening controller connections or writing settings. Check tool export as well as startup; controller uploads need separate real-hardware testing.
 
 For a headless macOS smoke test:
 
@@ -114,4 +114,4 @@ QT_QPA_PLATFORM=offscreen \
   --screenshot /tmp/masso-packaged.png
 ```
 
-The script bundles the app icon, sidebar logo, project notices, dependency metadata, and the QR/Pillow image backend. Review the dependencies' distribution terms and include required Qt and other third-party license materials before publishing a release.
+The script bundles the app icon, sidebar logo, project notices, and dependency metadata. Pillow is a build dependency for converting the Mac icon to `.icns`. Review the dependencies' distribution terms and include required Qt and other third-party license materials before publishing a release.

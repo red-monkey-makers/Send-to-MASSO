@@ -1,6 +1,6 @@
 # Send-to-MASSO
 
-Send-to-MASSO is an independent desktop utility for sending G-code files to a MASSO controller over the network. Version 2 uses a Qt interface with an upload queue, live machine status, connection profiles, QR-code export, and read-only tool-data export.
+Send-to-MASSO is an independent desktop utility for sending G-code files to a MASSO controller over the network. Version 2 uses a Qt interface with an upload queue, live machine status, connection profiles, and read-only tool-data export.
 
 This project is not affiliated with or endorsed by MASSO. Its network protocol is based on packet captures and real-controller testing, rather than official MASSO documentation.
 
@@ -105,7 +105,6 @@ To create one combined program, combine and post it in Fusion using your Fusion 
 | **Remove** | Removes selected queue entries. |
 | **Clear** | Clears the queue when no upload is active. |
 | **Move up / Move down** | Changes the selected file's position before sending. |
-| **QR codes…** | Exports codes for selected entries, or the entire queue when none are selected. |
 | **Clear queue after success** | Clears the queue after a successful run. |
 
 Changing the target folder updates **Pending** and **Failed** entries. **Sending** and **Done** entries keep their original destinations. The queue is not saved between app launches.
@@ -125,14 +124,6 @@ Use plain ASCII names, such as `Bracket Left.nc`, `part#12.tap`, or `CustomerPar
 ```text
 : * ? " < > |
 ```
-
-## Export QR codes
-
-1. Add files and set the correct target folder.
-2. Select the entries you want to export. To export every queued entry, clear the selection.
-3. Click **QR codes…** and choose an output folder.
-
-The app creates one PNG per file, named `YourFileName_MASSO_QR.png`. QR codes refer to the MASSO target paths; the corresponding G-code files must exist at those paths on the controller. If files have identical names, select and export them separately to avoid filename collisions.
 
 ## Export tool data
 
@@ -158,11 +149,10 @@ Existing settings from the legacy app remain compatible. To reuse source setting
 
 **Send queue is disabled:** check the readiness message below machine status, ensure valid files are queued, and confirm you are running normally rather than with `--demo`.
 
-**A QR code does not load the file:** check that the file exists on MASSO at exactly the folder and filename used when generating the code.
 
 For an issue report, include your operating system, app version, source or packaged launch method, MASSO model and firmware, file size, target folder, expected behavior, actual behavior, and relevant **Activity log** lines. Packet captures are helpful if available, but are not required.
 
-The app does not browse controller folders, delete or rename files on MASSO, or edit controller settings. Unknown alarm codes block uploads. QR behavior and controller compatibility still benefit from real-world testing.
+The app does not browse controller folders, delete or rename files on MASSO, or edit controller settings. Unknown alarm codes block uploads. Controller compatibility still benefits from real-world testing.
 
 ## Development and reference
 

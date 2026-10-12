@@ -260,7 +260,7 @@ class DesktopTests(unittest.TestCase):
         self.assertFalse(self.window.workflow.running)
         self.assertEqual(self.window.workflow.items[0].status, "Done")
 
-    def test_tool_events_export_and_qr_generation(self):
+    def test_tool_events_and_export(self):
         self.window.events.put(("tool_data", {"tool_index": 3, "tool_name": "End mill"}))
         self.window.events.put(("tools_scan_complete", {"ok": True}))
         self.window.poll()
@@ -269,14 +269,6 @@ class DesktopTests(unittest.TestCase):
         with patch("send_to_masso.QFileDialog.getSaveFileName", return_value=(str(output), "")):
             self.window.export_tools()
         self.assertIn("End mill", output.read_text())
-        self.window.add_files([str(self.path)])
-        with patch("send_to_masso.QFileDialog.getExistingDirectory", return_value=self.temp.name), \
-             patch("send_to_masso.QMessageBox.information"):
-            self.window.generate_qr()
-        from PIL import Image
-        image_path = Path(self.temp.name) / "part_MASSO_QR.png"
-        with Image.open(image_path) as image:
-            self.assertEqual(image.format, "PNG")
 
     def test_connected_profile_changes_preserve_active_identity(self):
         from copy import deepcopy

@@ -169,20 +169,6 @@ Do factory tools, such as Plasma Torch or Camera, appear as expected?
 
 Current Tools Data support is read-only and exports tool number plus tool name.
 
-## QR-code tests
-
-Useful QR feedback:
-
-```text
-QR for a file in the MASSO root folder
-QR for a file in a subfolder
-QR for a file name with spaces
-QR for a file name with #
-QR Queue for several files
-```
-
-The QR code should load the same target path shown in the app. Make sure the file has actually been uploaded to that same MASSO folder.
-
 ## Good bug reports
 
 A good report does not have to be long. Something like this is very useful:
@@ -209,7 +195,7 @@ Install the dependencies in `requirements.txt`, then run:
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Desktop tests use Qt's offscreen platform and fake upload calls. They never connect to a controller. They cover queue editing, folder preview, readiness gating, worker completion events, tool text export, QR PNG generation, and rendering all views. Queue tests cover fault/running/prompt/debounce/stale-status gates, retries, sequential worker handoff, and auto-clear.
+Desktop tests use Qt's offscreen platform and fake upload calls. They never connect to a controller. They cover queue editing, folder preview, readiness gating, worker completion events, tool text export, and rendering all views. Queue tests cover fault/running/prompt/debounce/stale-status gates, retries, sequential worker handoff, and auto-clear.
 
 For a screenshot without opening a desktop window:
 
@@ -226,6 +212,6 @@ Manual checks before releasing v2:
 - Verify a running/faulted/prompt-waiting controller locks uploads and stale status locks the next queued upload.
 - Verify a failed upload leaves later files pending and permits a retry after recovery.
 - Verify target-folder edits change pending/failed entries while preserving completed entries.
-- Scan tools and compare the exported names to the controller; verify QR images load the intended targets.
+- Scan tools and compare the exported names to the controller.
 
 Connection identity tests verify sender filtering for status/ACK/serial/tool packets, hostname resolution, pinned upload addresses, and rejection of old-listener packets after reconnect. Desktop regression tests cover connected profile locks, blocked queue additions, and multiple-selection preservation. All use fake sockets or clients.

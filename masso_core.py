@@ -124,26 +124,6 @@ def build_remote_target_preview(local_path: str, remote_folder: str) -> str:
     return folder + filename if filename else folder
 
 
-def build_masso_qr_payload(local_path: str, remote_folder: str) -> str:
-    """Build MASSO QR payload for loading a G-code file.
-
-    MASSO documentation describes payloads in the form:
-        ^CSLG<path-to-gcode-file>^CE
-
-    The examples do not show a leading root backslash, so strip leading root backslashes from
-    the displayed MASSO target for QR generation. Internal folder separators are
-    left as MASSO-style backslashes.
-    """
-    target = build_remote_target_preview(local_path, remote_folder)
-    qr_target = target.lstrip("\\")
-    return f"^CSLG{qr_target}^CE"
-
-
-def default_qr_filename(local_path: str) -> str:
-    path = Path(local_path)
-    return f"{path.stem}_MASSO_QR.png"
-
-
 def validate_masso_name_parts(local_path: str, remote_folder: str) -> tuple[bool, list[str], list[str], str]:
     """Validate the target path/name using the shop-tested practical rule set.
 

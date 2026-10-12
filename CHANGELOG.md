@@ -6,6 +6,8 @@ Version 2 is an unreleased desktop preview. Earlier entries describe the retired
 
 ### Desktop and workflows
 
+- Removed QR-code export from the app and its runtime dependencies.
+
 - Added the Send-2-MASSO logo in a light sidebar panel, with high-resolution rendering and bundled image assets.
 
 - Replaced the Tkinter interface with a PySide6 workspace containing File queue, Tools & export, and Profiles views, plus a collapsible Activity log.

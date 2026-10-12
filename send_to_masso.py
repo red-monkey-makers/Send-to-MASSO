@@ -22,7 +22,7 @@ except ImportError:
     raise SystemExit("Install the desktop dependencies first:\n  python -m pip install -r requirements.txt")
 
 from masso_core import (
-    APP_DIR, APP_NAME, APP_VERSION, RESOURCE_DIR, MassoClient, MassoStatus, build_masso_qr_payload, default_qr_filename,
+    APP_DIR, APP_NAME, APP_VERSION, RESOURCE_DIR, MassoClient, MassoStatus,
     format_elapsed_seconds, load_config, normalize_masso_folder, save_config,
     validate_masso_name_parts,
 )
@@ -396,8 +396,6 @@ class MainWindow(QMainWindow):
             tools.addWidget(b)
             self.queue_buttons.append(b)
         tools.addStretch()
-        self.qr_btn = button("QR codes…", self.generate_qr)
-        tools.addWidget(self.qr_btn)
         body.addLayout(tools)
         self.target_preview = label("Target   \\", "muted")
         self.target_preview.setWordWrap(True)
@@ -794,7 +792,6 @@ class MainWindow(QMainWindow):
         self.send_btn.setToolTip("Send all pending files" if allowed else reason)
         for b in self.queue_buttons:
             b.setEnabled(not busy)
-        self.qr_btn.setEnabled(bool(self.workflow.items))
         self.scan_btn.setEnabled(not self.demo and st.connected and fresh and not busy and not self.tools_busy)
         self.export_btn.setEnabled(bool(self.tools_data) and not self.tools_busy)
         self.transfer_progress.setValue(self.workflow.progress)
@@ -864,37 +861,6 @@ class MainWindow(QMainWindow):
             self.tools_status.setText(f"Exported {len(self.tools_data)} tools to {Path(output).name}")
         except OSError as exc:
             self.warn(str(exc))
-
-    def generate_qr(self):
-        ids = self.selected_ids()
-        items = [item for item in self.workflow.items if item.id in ids] if ids else self.workflow.items
-        if not items:
-            return
-        for item in items:
-            ok, errors, _, _ = validate_masso_name_parts(item.path, item.folder)
-            if not ok:
-                return self.warn(" ".join(errors))
-        output = QFileDialog.getExistingDirectory(self, "Save QR codes for selected files" if ids else "Save QR codes for queue")
-        if not output:
-            return
-        try:
-            import qrcode
-            names = [default_qr_filename(item.path) for item in items]
-            if len(set(names)) != len(names):
-                return self.warn("Files with the same name would overwrite QR images. Select them separately.")
-            destinations = [Path(output) / name for name in names]
-            if any(path.exists() for path in destinations):
-                if QMessageBox.question(self, "Replace QR codes", "Some QR images already exist. Replace them?") != QMessageBox.StandardButton.Yes:
-                    return
-            for item, destination in zip(items, destinations):
-                qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=4)
-                qr.add_data(build_masso_qr_payload(item.path, item.folder))
-                qr.make(fit=True)
-                qr.make_image(fill_color="black", back_color="white").save(destination)
-            self.log(f"Saved {len(items)} QR code(s) to {output}")
-            QMessageBox.information(self, "QR codes saved", f"Saved {len(items)} QR code(s) to:\n{output}")
-        except Exception as exc:
-            self.warn(f"Could not generate QR codes: {exc}")
 
     def toggle_log(self, checked):
         self.log_view.setVisible(checked)

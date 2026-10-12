@@ -26,12 +26,12 @@ def main():
                "--distpath", str(ROOT / "dist"), "--workpath", str(ROOT / "build" / "pyinstaller"),
                "--specpath", str(ROOT / "build"), "--noupx", "--exclude-module", "tkinter",
                "--icon", str(ROOT / "assets" / "send-2-masso-dock-icon.png" if sys.platform == "darwin"
-                             else ROOT / "S2M.ico"), "--hidden-import", "qrcode.image.pil"]
+                             else ROOT / "S2M.ico")]
     for filename in ("S2M.ico", "LICENSE", "THIRD_PARTY_NOTICES.md"):
         command.extend(["--add-data", f"{ROOT / filename}:."])
     command.extend(["--add-data", f"{ROOT / 'assets' / 'send-2-masso-logo.png'}:assets"])
     command.extend(["--add-data", f"{ROOT / 'assets' / 'send-2-masso-dock-icon.png'}:assets"])
-    for package in ("PySide6-Essentials", "shiboken6", "qrcode", "Pillow"):
+    for package in ("PySide6-Essentials", "shiboken6"):
         command.extend(["--copy-metadata", package])
     if sys.platform == "darwin":
         command.extend(["--osx-bundle-identifier", "com.redmonkeymakers.sendtomasso"])
