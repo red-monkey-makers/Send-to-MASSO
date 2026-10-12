@@ -1,14 +1,14 @@
 # Third-party notices
 
-These notices cover the v2 desktop application and its packaging dependencies. Send-to-MASSO Manager's own code is licensed under the [MIT License](LICENSE). Third-party components retain their own copyrights and license terms.
+These notices cover the application and its packaging dependencies. Send-to-MASSO's own code is licensed under the [MIT License](LICENSE). Third-party components retain their own copyrights and license terms.
 
 ## MASSO protocol client and research
 
-Send-to-MASSO Manager includes or derives portions of code and protocol research from Andrew's [`masso-link-protocol-client`](https://github.com/andrewpc/masso-link-protocol-client) project. The upstream README identifies its license as MIT.
+Send-to-MASSO includes or derives portions of code and protocol research from Andrew's [`masso-link-protocol-client`](https://github.com/andrewpc/masso-link-protocol-client) project. The upstream README identifies its license as MIT.
 
 Andrew's work provided the starting point for the UDP connection, status monitoring, upload sequence, and tool-data exploration. The current implementation resides in `masso_core.py` and includes this project's subsequent protocol corrections and compatibility work.
 
-Retain the upstream attribution and any copyright and license notices supplied with the upstream code. This repository's `LICENSE` describes Send-to-MASSO Manager's own license; it does not replace upstream notices.
+Retain the upstream attribution and any copyright and license notices supplied with the upstream code. This repository's `LICENSE` describes Send-to-MASSO's' own license; it does not replace upstream notices.
 
 ## Desktop runtime dependencies
 
@@ -38,4 +38,4 @@ Package metadata alone is not a complete set of dependency license texts. Preser
 
 ## Independence and trademarks
 
-Send-to-MASSO Manager is independent software and is not affiliated with or endorsed by MASSO, The Qt Company, or the other upstream projects named here. Product and project names remain the property of their respective owners.
+Send-to-MASSO is independent software and is not affiliated with or endorsed by MASSO, The Qt Company, or the other upstream projects named here. Product and project names remain the property of their respective owners.
