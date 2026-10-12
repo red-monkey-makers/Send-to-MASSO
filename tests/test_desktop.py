@@ -172,8 +172,19 @@ class DesktopTests(unittest.TestCase):
         self.assertFalse(self.window.profile_buttons[0].isEnabled())
 
     def test_tool_library_slides_over_queue_and_closes(self):
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import Qt, QAbstractAnimation
         from PySide6.QtTest import QTest
+
+        def wait_for_pane(opened):
+            deadline = time.monotonic() + 2
+            while time.monotonic() < deadline:
+                self.app.processEvents()
+                if (self.window.tools_host.animation.state() == QAbstractAnimation.State.Stopped
+                        and self.window.tools_pane.isVisible() == opened):
+                    return
+                QTest.qWait(10)
+            self.fail(f"Tool pane did not finish {'opening' if opened else 'closing'}")
+
         self.window.demo = False
         self.window.client.connected = True
         self.window.client.status = MassoStatus(connected=True, last_packet_time=time.monotonic())
@@ -182,11 +193,12 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual([b.text() for b in self.window.nav_buttons], ["File queue", "Profiles"])
         self.window.set_page(0)
         self.window.show()
-        self.app.processEvents()
+        self.window.activateWindow()
+        self.assertTrue(QTest.qWaitForWindowActive(self.window, 2000))
         self.assertFalse(self.window.tools_pane.isVisible())
         queue_width = self.window.table.width()
         self.window.tools_toggle.click()
-        QTest.qWait(260)
+        wait_for_pane(True)
         self.assertTrue(self.window.tools_pane.isVisible())
         self.assertTrue(self.window.scan_btn.isVisible())
         self.assertTrue(self.window.export_btn.isVisible())
@@ -196,17 +208,20 @@ class DesktopTests(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(self.window.tools_pane.geometry().right(), self.window.tools_host.width() - 1)
         self.window.tools_close.click()
-        QTest.qWait(260)
+        wait_for_pane(False)
         self.assertFalse(self.window.tools_pane.isVisible())
         self.assertFalse(self.window.tools_toggle.isChecked())
         self.window.tools_toggle.click()
-        QTest.qWait(260)
+        wait_for_pane(True)
+        self.window.tools_close.setFocus()
+        self.app.processEvents()
+        self.assertTrue(self.window.tools_close.hasFocus())
         QTest.keyClick(self.window.tools_close, Qt.Key.Key_Escape)
-        QTest.qWait(260)
+        wait_for_pane(False)
         self.assertFalse(self.window.tools_pane.isVisible())
         self.window.tools_toggle.click()
         self.window.set_page(1)
-        QTest.qWait(260)
+        wait_for_pane(False)
         self.assertFalse(self.window.tools_pane.isVisible())
         self.assertEqual(self.window.page_scroll.verticalScrollBar().value(), 0)
 
